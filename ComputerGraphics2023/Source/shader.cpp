@@ -1,0 +1,7 @@
+namespace custom 
+{
+	int Hello() 
+	{
+
+	}
+}
