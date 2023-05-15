@@ -1,7 +1,0 @@
-namespace custom 
-{
-	int Hello() 
-	{
-
-	}
-}

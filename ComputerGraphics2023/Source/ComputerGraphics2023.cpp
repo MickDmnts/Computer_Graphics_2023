@@ -1,7 +1,8 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
-#include "shader.h"
+
+#include "Shader.h"
 
 void frameBufferSizeCallback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
@@ -11,8 +12,6 @@ unsigned int SCR_HEIGHT = 720;
 
 int main()
 {	
-	custom:Hello();
-
 	//glfw init
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -37,6 +36,35 @@ int main()
 		glfwTerminate();
 		return -1;
 	}
+
+	Shader shader("Source/Shaders/vertexShader.vs", "Source/Shaders/fragmentShader.fs");
+
+	//Geometry definition - FBX model mock
+	float vertices[] = {
+		//First 3 -> Position - Last 3 -> Color
+		-0.5, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, //Left corner
+		 0.5, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, //Right corner
+		 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f //Top Corner
+	};
+
+	unsigned int VBO, VAO;
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+
+	glBindVertexArray(VAO); //VAO Bind
+	glBindBuffer(GL_ARRAY_BUFFER, VBO); //VBO Bind
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	//Vertex attribute for Position
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+	glad_glEnableVertexAttribArray(0);
+
+	//Vertex attribute for Color
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+	glad_glEnableVertexAttribArray(1);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0); //VBO Unbind
+	glBindVertexArray(0); //VAO Unbind
 
 	// MAIN RENDERING LOOP
 	while (!glfwWindowShouldClose(window))

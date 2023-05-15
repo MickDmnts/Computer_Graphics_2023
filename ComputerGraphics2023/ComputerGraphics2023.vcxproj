@@ -153,10 +153,7 @@
   <ItemGroup>
     <ClCompile Include="3rdParty\src\glad.c" />
     <ClCompile Include="Source\ComputerGraphics2023.cpp" />
-    <ClCompile Include="Source\shader.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Source\shader.h" />
+    <ClCompile Include="Source\Shader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
