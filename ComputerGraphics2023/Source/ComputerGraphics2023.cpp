@@ -10,8 +10,18 @@ void processInput(GLFWwindow* window);
 unsigned int SCR_WIDTH = 1280;
 unsigned int SCR_HEIGHT = 720;
 
+// time settings
+float deltaTime = 0.0f;
+float lastFrameTime = 0.0f;
+
+//Input handling
+float displacement_X = 0.0f;
+float displacement_Y = 0.0f;
+float displacement_Z = 0.0f;
+float movementSpeed = 1.0f;
+
 int main()
-{	
+{
 	//glfw init
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -69,6 +79,11 @@ int main()
 	// MAIN RENDERING LOOP
 	while (!glfwWindowShouldClose(window))
 	{
+		//DeltaTime calculation
+		float currentFrameTime = glfwGetTime();
+		deltaTime = currentFrameTime - lastFrameTime;
+		lastFrameTime = currentFrameTime;
+
 		// handle user input
 		processInput(window);
 
@@ -78,8 +93,13 @@ int main()
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		//TODO MORE RENDERING
-		// ------------
+		// Enable shader and update uniform variables
+		shader.use();
+		shader.setVec3("displacement", displacement_X, displacement_Y, displacement_Z);
+
+		//RENDERING
+		glBindVertexArray(VAO);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
 
 		// glfw: double buffering and polling IO events (keyboard, mouse, etc.)
 		glfwSwapBuffers(window);
@@ -95,29 +115,44 @@ int main()
 //Handle keyboard input events
 void processInput(GLFWwindow* window)
 {
+	//Exit
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 	{
 		glfwSetWindowShouldClose(window, true);
 	}
 
+	//Movement
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
 	{
-		std::cout << "A\n";
+		displacement_X -= movementSpeed * deltaTime;
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
 	{
-		std::cout << "S\n";
+		displacement_Y -= movementSpeed * deltaTime;
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 	{
-		std::cout << "D\n";
+		displacement_X += movementSpeed * deltaTime;
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 	{
-		std::cout << "W\n";
+		displacement_Y += movementSpeed * deltaTime;
+	}
+
+	//Depth
+	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+	{
+		displacement_Z -= movementSpeed * deltaTime;
+		std::cout << displacement_Z << std::endl;
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+	{
+		displacement_Z += movementSpeed * deltaTime;
+		std::cout << displacement_Z << std::endl;
 	}
 }
 

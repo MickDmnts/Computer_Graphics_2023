@@ -48,16 +48,16 @@ public:
 
 			//Convert string Streams into strings
 			vertexCode = vSStream.str();
-			fragmentCode= fSStream.str();
+			fragmentCode = fSStream.str();
 		}
 		catch (std::ifstream::failure& e)
 		{
 			std::cout << "SHADER FILE READ ERROR\n";
 		}
-		
+
 		//Shader building and linking pipeline
 		const char* vertexCode_C = vertexCode.c_str();
-		const char*	fragmentCode_C = fragmentCode.c_str();
+		const char* fragmentCode_C = fragmentCode.c_str();
 
 		//Compile shaders --------------------------------
 		unsigned int vertex, fragment;
@@ -87,9 +87,45 @@ public:
 		glDeleteShader(fragment);
 	}
 
+	void use()
+	{
+		glUseProgram(ID);
+	}
+
+	void setVec3(const std::string& name, float x, float y, float z) const
+	{
+		int location = glGetUniformLocation(ID, name.c_str());
+		glUniform3f(location, x, y, z);
+	}
+
 private:
-	void checkForErrors(unsigned int shaderCode, std::string type) {
-		//TODO 
+	void checkForErrors(unsigned int shaderCode, std::string type)
+	{
+		int success;
+		char infoLog[1024];
+		if (type != "PROGRAM")
+		{
+			glGetShaderiv(shaderCode, GL_COMPILE_STATUS, &success);
+			if (!success)
+			{
+				glGetShaderInfoLog(shaderCode, 1024, NULL, infoLog);
+
+				std::cout << "SHADER COMPILATION ERROR --- " << type << std::endl << infoLog
+					<< std::endl << "-- --------------------------- --" << std::endl;
+			}
+		}
+		else
+		{
+			glGetProgramiv(shaderCode, GL_LINK_STATUS, &success);
+
+			if (!success)
+			{
+				glGetProgramInfoLog(shaderCode, 1024, NULL, infoLog);
+
+				std::cout << "SHADER LINKING ERROR --- " << type << std::endl << infoLog
+					<< std::endl << "-- --------------------------- --" << std::endl;
+			}
+		}
 	}
 };
 
