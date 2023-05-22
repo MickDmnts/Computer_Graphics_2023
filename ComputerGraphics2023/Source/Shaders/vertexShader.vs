@@ -5,13 +5,15 @@ layout(location = 1) in vec3 color;
 
 out vec4 vertexColor;
 
-uniform vec3 displacement;
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
 
 void main()
 {
     vertexColor = vec4(color, 1.0);
 
-    vec3 finalPos = position + displacement;
+    vec4 finalPos = projection * view * model * vec4(position, 1.0); 
 
-    gl_Position = vec4(finalPos, 1.0);
+    gl_Position = finalPos;
 }

@@ -2,6 +2,7 @@
 #define SHADER_H
 
 #include <glad\glad.h>
+#include <glm\glm.hpp>
 
 //String usage
 #include <string>
@@ -98,6 +99,18 @@ public:
 		glUniform3f(location, x, y, z);
 	}
 
+	void setVec3(const std::string& name, const glm::vec3& value) const
+	{
+		int location = glGetUniformLocation(ID, name.c_str());
+		glUniform3fv(location, 1, &value[0]);
+	}
+
+	void setMat4(const std::string& name, const glm::mat4& value) const
+	{
+		int location = glGetUniformLocation(ID, name.c_str());
+		glUniformMatrix4fv(location, 1, GL_FALSE, &value[0][0]);
+	}
+
 private:
 	void checkForErrors(unsigned int shaderCode, std::string type)
 	{
@@ -128,5 +141,4 @@ private:
 		}
 	}
 };
-
 #endif

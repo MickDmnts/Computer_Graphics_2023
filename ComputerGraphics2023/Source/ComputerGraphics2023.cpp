@@ -1,5 +1,9 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include <iostream>
 
 #include "Shader.h"
@@ -15,9 +19,7 @@ float deltaTime = 0.0f;
 float lastFrameTime = 0.0f;
 
 //Input handling
-float displacement_X = 0.0f;
-float displacement_Y = 0.0f;
-float displacement_Z = 0.0f;
+glm::vec3 displacement = glm::vec3(0.0f, 0.0f, -2.0f);
 float movementSpeed = 1.0f;
 
 int main()
@@ -87,15 +89,30 @@ int main()
 		// handle user input
 		processInput(window);
 
-		// RENDER STUFF
-
 		// Reinitialize frame buffer
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		// Enable shader and update uniform variables
 		shader.use();
-		shader.setVec3("displacement", displacement_X, displacement_Y, displacement_Z);
+
+		glm::mat4 model = glm::mat4(1.0f);
+		glm::mat4 view = glm::mat4(1.0f);
+		glm::mat4 projection = glm::mat4(1.0f);
+
+		// calculate projection matrix
+		// attributes: fov, aspect ratio, near clipping plane, far clipping plane
+		projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
+
+		// model = identity
+		model = glm::translate(model, displacement);
+
+		// model = identity * translate = translate
+		model = glm::rotate(model, cosf(glfwGetTime()), glm::vec3(0.0f, 1.0f, 0.0f));
+
+		shader.setMat4("model", model);
+		shader.setMat4("view", view);
+		shader.setMat4("projection", projection);
 
 		//RENDERING
 		glBindVertexArray(VAO);
@@ -124,40 +141,40 @@ void processInput(GLFWwindow* window)
 	//Movement
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
 	{
-		displacement_X -= movementSpeed * deltaTime;
+		displacement.x -= movementSpeed * deltaTime;
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
 	{
-		displacement_Y -= movementSpeed * deltaTime;
+		displacement.y -= movementSpeed * deltaTime;
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 	{
-		displacement_X += movementSpeed * deltaTime;
+		displacement.x += movementSpeed * deltaTime;
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 	{
-		displacement_Y += movementSpeed * deltaTime;
+		displacement.y += movementSpeed * deltaTime;
 	}
 
 	//Depth
 	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
 	{
-		displacement_Z -= movementSpeed * deltaTime;
-		std::cout << displacement_Z << std::endl;
+		displacement.z -= movementSpeed * deltaTime;
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
 	{
-		displacement_Z += movementSpeed * deltaTime;
-		std::cout << displacement_Z << std::endl;
+		displacement.z += movementSpeed * deltaTime;
 	}
 }
 
 //frame buffer resizing callback
 void frameBufferSizeCallback(GLFWwindow* window, int width, int height)
 {
+	SCR_WIDTH = width;
+	SCR_HEIGHT = height;
 	glViewport(0, 0, width, height);
 }
