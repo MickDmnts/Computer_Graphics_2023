@@ -7,15 +7,22 @@
 #include <iostream>
 
 #include "Shader.h"
+#include "TextureLoader.h"
 
 using namespace std;
 using namespace glm;
+
+void GLFW_Init();
+GLFWwindow* GLFW_WindowInit();
+bool GLAD_Init();
 
 void frameBufferSizeCallback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 
 unsigned int SCR_WIDTH = 1280;
 unsigned int SCR_HEIGHT = 720;
+
+GLFWwindow* window;
 
 // time settings
 float deltaTime = 0.0f;
@@ -27,27 +34,12 @@ float movementSpeed = 1.0f;
 
 int main()
 {
-	//glfw init
-	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	GLFW_Init();
+	
+	window = GLFW_WindowInit();
 
-	//Window creation
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Computer Graphics 2023", NULL, NULL);
-	if (window == NULL)
+	if(!GLAD_Init())
 	{
-		cout << "Failed to create GLFW window \n";
-		glfwTerminate();
-		return -1;
-	}
-	glfwMakeContextCurrent(window);
-	glfwSetFramebufferSizeCallback(window, frameBufferSizeCallback);
-
-	// glad: load OpenGL function pointers
-	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-	{
-		cout << "Failed to load OpenGL function pointers!" << endl;
 		glfwTerminate();
 		return -1;
 	}
@@ -80,6 +72,7 @@ int main()
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0); //VBO Unbind
 	glBindVertexArray(0); //VAO Unbind
+
 
 	// MAIN RENDERING LOOP
 	while (!glfwWindowShouldClose(window))
@@ -131,6 +124,44 @@ int main()
 	glfwTerminate();
 
 	return 0;
+}
+
+void GLFW_Init()
+{
+	//glfw init
+	glfwInit();
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+}
+
+GLFWwindow* GLFW_WindowInit()
+{
+	//Window creation
+	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Computer Graphics 2023", NULL, NULL);
+	if (window == NULL)
+	{
+		cout << "Failed to create GLFW window \n";
+		glfwTerminate();
+		return NULL;
+	}
+
+	glfwMakeContextCurrent(window);
+	glfwSetFramebufferSizeCallback(window, frameBufferSizeCallback);
+	
+	return window;
+}
+
+bool GLAD_Init()
+{
+	// glad: load OpenGL function pointers
+	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+	{
+		cout << "Failed to load OpenGL function pointers!" << endl;
+		return false;
+	}
+
+	return true;
 }
 
 //Handle keyboard input events
