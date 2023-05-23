@@ -12,6 +12,9 @@
 #include <sstream>
 #include <fstream>
 
+using namespace std;
+using namespace glm;
+
 //Class declaration
 class Shader
 {
@@ -23,15 +26,15 @@ public:
 	//Constructor
 	Shader(const char* vertexPath, const char* fragmentPath)
 	{
-		std::string vertexCode;
-		std::string fragmentCode;
+		string vertexCode;
+		string fragmentCode;
 
-		std::ifstream vertShaderFile;
-		std::ifstream fragShaderFile;
+		ifstream vertShaderFile;
+		ifstream fragShaderFile;
 
 		//ensure that the ifstream objects can throw exceptions
-		vertShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-		fragShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+		vertShaderFile.exceptions(ifstream::failbit | ifstream::badbit);
+		fragShaderFile.exceptions(ifstream::failbit | ifstream::badbit);
 
 		try
 		{
@@ -40,7 +43,7 @@ public:
 			fragShaderFile.open(fragmentPath);
 
 			//Read file's contents into streams
-			std::stringstream vSStream, fSStream;
+			stringstream vSStream, fSStream;
 			vSStream << vertShaderFile.rdbuf();
 			fSStream << fragShaderFile.rdbuf();
 
@@ -51,9 +54,9 @@ public:
 			vertexCode = vSStream.str();
 			fragmentCode = fSStream.str();
 		}
-		catch (std::ifstream::failure& e)
+		catch (ifstream::failure& e)
 		{
-			std::cout << "SHADER FILE READ ERROR\n";
+			cout << "SHADER FILE READ ERROR\n";
 		}
 
 		//Shader building and linking pipeline
@@ -93,38 +96,39 @@ public:
 		glUseProgram(ID);
 	}
 
-	void setVec3(const std::string& name, float x, float y, float z) const
+	void setVec3(const string& name, float x, float y, float z) const
 	{
 		int location = glGetUniformLocation(ID, name.c_str());
 		glUniform3f(location, x, y, z);
 	}
 
-	void setVec3(const std::string& name, const glm::vec3& value) const
+	void setVec3(const string& name, const vec3& value) const
 	{
 		int location = glGetUniformLocation(ID, name.c_str());
 		glUniform3fv(location, 1, &value[0]);
 	}
 
-	void setMat4(const std::string& name, const glm::mat4& value) const
+	void setMat4(const string& name, const mat4& value) const
 	{
 		int location = glGetUniformLocation(ID, name.c_str());
 		glUniformMatrix4fv(location, 1, GL_FALSE, &value[0][0]);
 	}
 
 private:
-	void checkForErrors(unsigned int shaderCode, std::string type)
+	void checkForErrors(unsigned int shaderCode, string type)
 	{
 		int success;
 		char infoLog[1024];
 		if (type != "PROGRAM")
 		{
 			glGetShaderiv(shaderCode, GL_COMPILE_STATUS, &success);
+
 			if (!success)
 			{
 				glGetShaderInfoLog(shaderCode, 1024, NULL, infoLog);
 
-				std::cout << "SHADER COMPILATION ERROR --- " << type << std::endl << infoLog
-					<< std::endl << "-- --------------------------- --" << std::endl;
+				cout << "SHADER COMPILATION ERROR --- " << type << endl << infoLog
+					<< endl << "-- --------------------------- --" << endl;
 			}
 		}
 		else
@@ -135,8 +139,8 @@ private:
 			{
 				glGetProgramInfoLog(shaderCode, 1024, NULL, infoLog);
 
-				std::cout << "SHADER LINKING ERROR --- " << type << std::endl << infoLog
-					<< std::endl << "-- --------------------------- --" << std::endl;
+				cout << "SHADER LINKING ERROR --- " << type << endl << infoLog
+					<< endl << "-- --------------------------- --" << endl;
 			}
 		}
 	}

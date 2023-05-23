@@ -8,6 +8,9 @@
 
 #include "Shader.h"
 
+using namespace std;
+using namespace glm;
+
 void frameBufferSizeCallback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 
@@ -19,7 +22,7 @@ float deltaTime = 0.0f;
 float lastFrameTime = 0.0f;
 
 //Input handling
-glm::vec3 displacement = glm::vec3(0.0f, 0.0f, -2.0f);
+vec3 displacement = vec3(0.0f, 0.0f, -2.0f);
 float movementSpeed = 1.0f;
 
 int main()
@@ -34,7 +37,7 @@ int main()
 	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Computer Graphics 2023", NULL, NULL);
 	if (window == NULL)
 	{
-		std::cout << "Failed to create GLFW window \n";
+		cout << "Failed to create GLFW window \n";
 		glfwTerminate();
 		return -1;
 	}
@@ -44,7 +47,7 @@ int main()
 	// glad: load OpenGL function pointers
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 	{
-		std::cout << "Failed to load OpenGL function pointers!" << std::endl;
+		cout << "Failed to load OpenGL function pointers!" << endl;
 		glfwTerminate();
 		return -1;
 	}
@@ -96,19 +99,20 @@ int main()
 		// Enable shader and update uniform variables
 		shader.use();
 
-		glm::mat4 model = glm::mat4(1.0f);
-		glm::mat4 view = glm::mat4(1.0f);
-		glm::mat4 projection = glm::mat4(1.0f);
+		//Transform declaration
+		mat4 model = mat4(1.0f);
+		mat4 view = mat4(1.0f);
+		mat4 projection = mat4(1.0f);
 
 		// calculate projection matrix
 		// attributes: fov, aspect ratio, near clipping plane, far clipping plane
-		projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
+		projection = perspective(radians(45.0f), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
 
 		// model = identity
-		model = glm::translate(model, displacement);
+		model = translate(model, displacement);
 
 		// model = identity * translate = translate
-		model = glm::rotate(model, cosf(glfwGetTime()), glm::vec3(0.0f, 1.0f, 0.0f));
+		model = rotate(model, (float)((1 % 360) * glfwGetTime()), vec3(0.0f, 1.0f, 0.0f));
 
 		shader.setMat4("model", model);
 		shader.setMat4("view", view);
