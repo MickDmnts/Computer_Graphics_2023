@@ -1,3 +1,5 @@
+#define STB_IMAGE_IMPLEMENTATION
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -12,13 +14,16 @@
 using namespace std;
 using namespace glm;
 
+#pragma region SIGNATURES
 void GLFW_Init();
 GLFWwindow* GLFW_WindowInit();
 bool GLAD_Init();
 
 void frameBufferSizeCallback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
+#pragma endregion
 
+#pragma region VARS
 unsigned int SCR_WIDTH = 1280;
 unsigned int SCR_HEIGHT = 720;
 
@@ -32,26 +37,82 @@ float lastFrameTime = 0.0f;
 vec3 displacement = vec3(0.0f, 0.0f, -2.0f);
 float movementSpeed = 1.0f;
 
+//Texture loader
+TextureLoader textLoader;
+#pragma endregion
+
 int main()
 {
 	GLFW_Init();
-	
+
 	window = GLFW_WindowInit();
 
-	if(!GLAD_Init())
+	if (!GLAD_Init())
 	{
 		glfwTerminate();
 		return -1;
 	}
 
-	Shader shader("Source/Shaders/vertexShader.vs", "Source/Shaders/fragmentShader.fs");
+	Shader shader = Shader("Source/Shaders/vertexShader.vs", "Source/Shaders/fragmentShader.fs");
+	textLoader = TextureLoader();
 
 	//Geometry definition - FBX model mock
 	float vertices[] = {
-		//First 3 -> Position - Last 3 -> Color
-		-0.5, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, //Left corner
-		 0.5, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, //Right corner
-		 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f //Top Corner
+		//positions		     //texture coords
+	   -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+		0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+		0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+	   -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+	   -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+	   -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+	   -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+	   -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+	   -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+	   -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+	   -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+	   -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+	   -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+	   -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+		0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+	   -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+		0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+	   -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+	   -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+	   -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+		0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+	   -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+	   -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+	};
+
+	vec3 cubePositions[] = {
+		vec3(0.0f, 0.0f, 0.0f),
+		vec3(2.0f, 5.0f, -15.0f),
+		vec3(-1.5f, -2.2f, -2.5f),
+		vec3(-3.8f, -2.0f, -12.3f),
+		vec3(2.4f, -0.4f, -3.5f),
+		vec3(-1.7f, 3.0f, -7.5f),
+		vec3(1.3f, -2.0f, -2.5f),
+		vec3(1.5f, 2.0f, -2.5f),
+		vec3(1.5f, 0.2f, -1.5f),
+		vec3(-1.3f, 1.0f, -1.5f)
 	};
 
 	unsigned int VBO, VAO;
@@ -63,16 +124,24 @@ int main()
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
 	//Vertex attribute for Position
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-	glad_glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
 
-	//Vertex attribute for Color
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-	glad_glEnableVertexAttribArray(1);
+	////Vertex attribute for Color
+	//glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+	//glEnableVertexAttribArray(1);
 
+	//Vertex attribute for texture
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+
+	//Texture Loading
+	unsigned int texturePNG = textLoader.loadTexture("Textures/awesomeface.png", true);
+	unsigned int textureJPG = textLoader.loadTexture("Textures/RTS_Crate.jpg", true);
+
+	//VAO - VBO Unbinding to make the pipeline clearer.
 	glBindBuffer(GL_ARRAY_BUFFER, 0); //VBO Unbind
 	glBindVertexArray(0); //VAO Unbind
-
 
 	// MAIN RENDERING LOOP
 	while (!glfwWindowShouldClose(window))
@@ -111,9 +180,22 @@ int main()
 		shader.setMat4("view", view);
 		shader.setMat4("projection", projection);
 
+		//Set texture samplers
+		shader.setInt("textureObj[0]", 0);
+		shader.setInt("textureObj[1]", 1);
+
 		//RENDERING
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+
+		//JPG Layer
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, textureJPG);
+
+		//PNG Layer
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, texturePNG);
+
+		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		// glfw: double buffering and polling IO events (keyboard, mouse, etc.)
 		glfwSwapBuffers(window);
@@ -126,6 +208,7 @@ int main()
 	return 0;
 }
 
+#pragma region GLFW_GLAD_INIT
 void GLFW_Init()
 {
 	//glfw init
@@ -148,7 +231,7 @@ GLFWwindow* GLFW_WindowInit()
 
 	glfwMakeContextCurrent(window);
 	glfwSetFramebufferSizeCallback(window, frameBufferSizeCallback);
-	
+
 	return window;
 }
 
@@ -163,7 +246,9 @@ bool GLAD_Init()
 
 	return true;
 }
+#pragma endregion
 
+#pragma region UTILS
 //Handle keyboard input events
 void processInput(GLFWwindow* window)
 {
@@ -213,3 +298,4 @@ void frameBufferSizeCallback(GLFWwindow* window, int width, int height)
 	SCR_HEIGHT = height;
 	glViewport(0, 0, width, height);
 }
+#pragma endregion

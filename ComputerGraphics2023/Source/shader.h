@@ -96,6 +96,12 @@ public:
 		glUseProgram(ID);
 	}
 
+	void setInt(const string& name, int value) const
+	{
+		int location = glGetUniformLocation(ID, name.c_str());
+		glUniform1i(location, value);
+	}
+
 	void setVec3(const string& name, float x, float y, float z) const
 	{
 		int location = glGetUniformLocation(ID, name.c_str());
