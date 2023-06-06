@@ -8,23 +8,22 @@ using namespace std;
 class TextureLoader
 {
 public:
-	TextureLoader()
-	{
-	}
-
 	unsigned int loadTexture(const char* texturePath, bool flipVertically)
 	{
 		unsigned int textureId;
+
 		glGenTextures(1, &textureId);
 		glBindTexture(GL_TEXTURE_2D, textureId);
 
-		//Texture wrapping properties
+		// Texture wrapping properties
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		// ---------------------------
 
-		//Texture filtering properties
+		// Texture filtering properties
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		// ----------------------------
 
 		//Should the texture flip vertically?
 		stbi_set_flip_vertically_on_load(flipVertically);

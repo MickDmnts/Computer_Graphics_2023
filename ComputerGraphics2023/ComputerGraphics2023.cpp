@@ -8,8 +8,10 @@
 
 #include <iostream>
 
-#include "Shader.h"
+//Custom includes
+#include "shader.h"
 #include "TextureLoader.h"
+#include "Camera.h"
 
 using namespace std;
 using namespace glm;
@@ -53,7 +55,10 @@ int main()
 		return -1;
 	}
 
-	Shader shader = Shader("Source/Shaders/vertexShader.vs", "Source/Shaders/fragmentShader.fs");
+	//Enabling-Disabling depth testing
+	glEnable(GL_DEPTH_TEST);
+
+	Shader shader = Shader("Shaders/vertexShader.vs", "Shaders/fragmentShader.fs");
 	textLoader = TextureLoader();
 
 	//Geometry definition - FBX model mock
@@ -103,37 +108,34 @@ int main()
 	};
 
 	vec3 cubePositions[] = {
-		vec3(0.0f, 0.0f, 0.0f),
-		vec3(2.0f, 5.0f, -15.0f),
-		vec3(-1.5f, -2.2f, -2.5f),
-		vec3(-3.8f, -2.0f, -12.3f),
-		vec3(2.4f, -0.4f, -3.5f),
-		vec3(-1.7f, 3.0f, -7.5f),
-		vec3(1.3f, -2.0f, -2.5f),
-		vec3(1.5f, 2.0f, -2.5f),
-		vec3(1.5f, 0.2f, -1.5f),
-		vec3(-1.3f, 1.0f, -1.5f)
+		vec3(0.0f, 0.0f, -10.0f),
+		vec3(1.0f, 1.0f, -10.0f),
+		vec3(2.0f, 2.0f, -10.0f),
+		vec3(3.0f, 3.0f, -10.0f),
+		vec3(4.0f, 4.0f, -10.0f),
+		vec3(-1.0f, -1.0f,-10.0f),
+		vec3(-2.0f, -2.0f, -10.0f),
+		vec3(-3.0f, -3.0f, -10.0f),
+		vec3(-4.0f, -4.0f, -10.0f),
 	};
 
 	unsigned int VBO, VAO;
+
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
 
-	glBindVertexArray(VAO); //VAO Bind
-	glBindBuffer(GL_ARRAY_BUFFER, VBO); //VBO Bind
+	glBindVertexArray(VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
 	//Vertex attribute for Position
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
-	////Vertex attribute for Color
-	//glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-	//glEnableVertexAttribArray(1);
-
 	//Vertex attribute for texture
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
 
 	//Texture Loading
 	unsigned int texturePNG = textLoader.loadTexture("Textures/awesomeface.png", true);
@@ -156,7 +158,7 @@ int main()
 
 		// Reinitialize frame buffer
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Enable shader and update uniform variables
 		shader.use();
@@ -170,13 +172,6 @@ int main()
 		// attributes: fov, aspect ratio, near clipping plane, far clipping plane
 		projection = perspective(radians(45.0f), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
 
-		// model = identity
-		model = translate(model, displacement);
-
-		// model = identity * translate = translate
-		model = rotate(model, (float)((1 % 360) * glfwGetTime()), vec3(0.0f, 1.0f, 0.0f));
-
-		shader.setMat4("model", model);
 		shader.setMat4("view", view);
 		shader.setMat4("projection", projection);
 
@@ -194,8 +189,15 @@ int main()
 		//PNG Layer
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, texturePNG);
-
-		glDrawArrays(GL_TRIANGLES, 0, 36);
+		
+		for (int i = 1; i < sizeof(cubePositions) / sizeof(cubePositions[0]); i++)
+		{
+			model = mat4(1.0f);
+			model = translate(model, cubePositions[i] + displacement);
+			model = rotate(model, (float)((1 % 360) * glfwGetTime()), vec3(0.0f, 1.0f, 0.0f));
+			shader.setMat4("model", model);
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+		}
 
 		// glfw: double buffering and polling IO events (keyboard, mouse, etc.)
 		glfwSwapBuffers(window);
