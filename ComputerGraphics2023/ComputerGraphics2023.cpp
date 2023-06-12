@@ -189,7 +189,7 @@ int main()
 		//PNG Layer
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, texturePNG);
-		
+
 		for (int i = 1; i < sizeof(cubePositions) / sizeof(cubePositions[0]); i++)
 		{
 			model = mat4(1.0f);
@@ -266,7 +266,7 @@ void processInput(GLFWwindow* window)
 		displacement.x -= movementSpeed * deltaTime;
 	}
 
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
 	{
 		displacement.y -= movementSpeed * deltaTime;
 	}
@@ -276,18 +276,18 @@ void processInput(GLFWwindow* window)
 		displacement.x += movementSpeed * deltaTime;
 	}
 
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
 	{
 		displacement.y += movementSpeed * deltaTime;
 	}
 
 	//Depth
-	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
 	{
 		displacement.z -= movementSpeed * deltaTime;
 	}
 
-	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 	{
 		displacement.z += movementSpeed * deltaTime;
 	}
