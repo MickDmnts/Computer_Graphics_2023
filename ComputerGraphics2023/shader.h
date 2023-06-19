@@ -18,10 +18,16 @@ using namespace glm;
 //Class declaration
 class Shader
 {
+private:
+	GLint* blingValue = 0;
+
 	//Public var declaration
 public:
 	//ID of the shader
 	unsigned int ID;
+
+	Shader()
+	{}
 
 	//Constructor
 	Shader(const char* vertexPath, const char* fragmentPath)
@@ -100,6 +106,12 @@ public:
 	{
 		int location = glGetUniformLocation(ID, name.c_str());
 		glUniform1i(location, value);
+	}
+
+	void setFloat(const string& name, float value) const
+	{
+		int location = glGetUniformLocation(ID, name.c_str());
+		glUniform1f(location, value);
 	}
 
 	void setVec3(const string& name, float x, float y, float z) const

@@ -88,6 +88,14 @@ public:
 			case RIGHT:
 				position += right * finalSpeed;
 				break;
+
+			case UP:
+				position += up * finalSpeed;
+				break;
+
+			case DOWN:
+				position -= up * finalSpeed;
+				break;
 		}
 	}
 

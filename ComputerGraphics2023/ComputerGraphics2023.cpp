@@ -7,6 +7,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <iostream>
+#include <limits>
 
 //Custom includes
 #include "shader.h"
@@ -37,6 +38,12 @@ float lastFrameTime = 0.0f;
 //Input handling
 vec3 displacement = vec3(0.0f, 0.0f, -2.0f);
 float movementSpeed = 1.0f;
+float keyCD = 0.0f;
+float toggleCD = 1.0f;
+
+//Shader
+Shader shader;
+bool useBlinnPhong = false;
 
 //Texture loader
 TextureLoader textLoader;
@@ -47,7 +54,7 @@ float previousY = 0.0f;
 bool isFirstFrame = true;
 
 // Camera declaration
-Camera myCamera1(glm::vec3(0.0f, 0.0f, 2.0f), glm::vec3(0.0f, 0.0f, -1.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 2.0f), glm::vec3(0.0f, 0.0f, -1.0f));
 #pragma endregion
 
 int main()
@@ -76,7 +83,7 @@ int main()
 	//Enabling-Disabling depth testing
 	glEnable(GL_DEPTH_TEST);
 
-	Shader shader = Shader("Shaders/vertexShader.vs", "Shaders/fragmentShader.fs");
+	shader = Shader("Shaders/vertexShader.vs", "Shaders/fragmentShader.fs");
 	textLoader = TextureLoader();
 
 	// Geometry definition
@@ -160,13 +167,18 @@ int main()
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 	glEnableVertexAttribArray(2);
 
-	////Texture Loading - Not needed for now
-	//unsigned int texturePNG = textLoader.loadTexture("Textures/awesomeface.png", true);
-	//unsigned int textureJPG = textLoader.loadTexture("Textures/RTS_Crate.jpg", true);
-
 	//VAO - VBO Unbinding to make the pipeline clearer.
 	glBindBuffer(GL_ARRAY_BUFFER, 0); //VBO Unbind
 	glBindVertexArray(0); //VAO Unbind
+
+	//Material setup
+	shader.use();
+	shader.setVec3("surfaceMat.ambient", glm::vec3(0.0215f, 0.1745f, 0.0215f));
+	shader.setVec3("surfaceMat.diffuse", glm::vec3(0.07568f, 0.61424f, 0.07568f));
+	shader.setVec3("surfaceMat.specular", glm::vec3(0.633f, 0.727811f, 0.633f));
+	shader.setFloat("surfaceMat.shininess", 128 * 0.6f);
+
+	shader.setVec3("lightColor", glm::vec3(1.0f));
 
 	// MAIN RENDERING LOOP
 	while (!glfwWindowShouldClose(window))
@@ -183,8 +195,11 @@ int main()
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// Enable shader and update uniform variables
 		shader.use();
+
+		shader.setVec3("lightPosition", glm::vec3(1.0f));
+		shader.setVec3("viewPosition", camera.position);
+		shader.setInt("useBlinnPhong", useBlinnPhong);
 
 		// declare transforms
 		glm::mat4 model = glm::mat4(1.0f);
@@ -193,28 +208,16 @@ int main()
 
 		// calculate projection matrix
 		// attributes: fov, aspect ratio, near clipping plane, far clipping plane
-		projection = glm::perspective(glm::radians(myCamera1.fov), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
+		projection = glm::perspective(glm::radians(camera.fov), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
 
 		// Update view matrix
-		view = myCamera1.GetViewMatrix();
+		view = camera.GetViewMatrix();
 
 		shader.setMat4("view", view);
 		shader.setMat4("projection", projection);
 
-		////Set texture samplers
-		//shader.setInt("textureObj[0]", 0);
-		//shader.setInt("textureObj[1]", 1);
-
 		//RENDERING
 		glBindVertexArray(VAO);
-
-		////JPG Layer
-		//glActiveTexture(GL_TEXTURE0);
-		//glBindTexture(GL_TEXTURE_2D, textureJPG);
-
-		////PNG Layer
-		//glActiveTexture(GL_TEXTURE1);
-		//glBindTexture(GL_TEXTURE_2D, texturePNG);
 
 		for (int i = 0; i < 10; i++)
 		{
@@ -282,6 +285,9 @@ bool GLAD_Init()
 //Handle keyboard input events
 void processInput(GLFWwindow* window)
 {
+	if (keyCD + deltaTime <= FLT_MAX)
+	{keyCD += deltaTime; }
+
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 	{
 		glfwSetWindowShouldClose(window, true);
@@ -289,29 +295,43 @@ void processInput(GLFWwindow* window)
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 	{
-		myCamera1.HandleKeyboard(FORWARD, deltaTime);
+		camera.HandleKeyboard(FORWARD, deltaTime);
 	}
+
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
 	{
-		myCamera1.HandleKeyboard(BACKWARD, deltaTime);
+		camera.HandleKeyboard(BACKWARD, deltaTime);
 	}
+
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 	{
-		myCamera1.HandleKeyboard(RIGHT, deltaTime);
+		camera.HandleKeyboard(RIGHT, deltaTime);
 	}
+
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
 	{
-		myCamera1.HandleKeyboard(LEFT, deltaTime);
+		camera.HandleKeyboard(LEFT, deltaTime);
 	}
 
 	// Move up or down
-	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-	{
-		myCamera1.HandleKeyboard(UP, deltaTime);
-	}
 	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
 	{
-		myCamera1.HandleKeyboard(DOWN, deltaTime);
+		camera.HandleKeyboard(UP, deltaTime);
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+	{
+		camera.HandleKeyboard(DOWN, deltaTime);
+	}
+
+	//Illumination model toggling
+	if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS)
+	{
+		if (keyCD >= toggleCD)
+		{
+			useBlinnPhong = !useBlinnPhong;
+			keyCD = 0.0f;
+		}
 	}
 }
 
@@ -339,12 +359,12 @@ void mouseCallback(GLFWwindow* window, double xPos, double yPos)
 	previousX = xPos;
 	previousY = yPos;
 
-	myCamera1.HandleMouseMovement(xOffset, yOffset, deltaTime);
+	camera.HandleMouseMovement(xOffset, yOffset, deltaTime);
 }
 
 // Scrolling callback
 void scrollCallback(GLFWwindow* window, double xOffset, double yOffset)
 {
-	myCamera1.HandleMouseScroll((float)yOffset);
+	camera.HandleMouseScroll((float)yOffset);
 }
 #pragma endregion

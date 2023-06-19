@@ -41,7 +41,7 @@ void main()
     if(useBlinnPhong)
     {
         vec3 halfwayVector = normalize(lightDirection + viewDirection);
-        specular = surfaceMat.specular * pow(dot(halfwayVector, normal), surfaceMat.shininess);
+        specular = surfaceMat.specular * pow(max(dot(halfwayVector, normal), 0.0), surfaceMat.shininess);
     }
     else
     {
