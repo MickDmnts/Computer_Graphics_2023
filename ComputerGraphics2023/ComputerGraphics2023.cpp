@@ -42,8 +42,11 @@ float keyCD = 0.0f;
 float toggleCD = 1.0f;
 
 //Shader
-Shader shader;
+Shader mainShader;
+Shader lightSourceShader;
 bool useBlinnPhong = false;
+glm::vec3 lightPosition = glm::vec3(0.0f, 1.0f, 0.0f);
+glm::vec3 lightColor = glm::vec3(1.0f);
 
 //Texture loader
 TextureLoader textLoader;
@@ -83,7 +86,8 @@ int main()
 	//Enabling-Disabling depth testing
 	glEnable(GL_DEPTH_TEST);
 
-	shader = Shader("Shaders/vertexShader.vs", "Shaders/fragmentShader.fs");
+	mainShader = Shader("Shaders/vertexShader.vs", "Shaders/fragmentShader.fs");
+	lightSourceShader = Shader("Shaders/vertexShader.vs", "Shaders/lightSourceShader.fs");
 	textLoader = TextureLoader();
 
 	// Geometry definition
@@ -142,7 +146,7 @@ int main()
 		glm::vec3(1.3f, -2.0f, -2.5f),
 		glm::vec3(1.5f, 2.0f, -2.5f),
 		glm::vec3(1.5f, 0.2f, -1.5f),
-		glm::vec3(-1.3f, 1.0f, -1.5f)
+		glm::vec3(-1.3f, 1.0f, -1.5f),
 	};
 
 	unsigned int VBO, VAO;
@@ -172,13 +176,13 @@ int main()
 	glBindVertexArray(0); //VAO Unbind
 
 	//Material setup
-	shader.use();
-	shader.setVec3("surfaceMat.ambient", glm::vec3(0.0215f, 0.1745f, 0.0215f));
-	shader.setVec3("surfaceMat.diffuse", glm::vec3(0.07568f, 0.61424f, 0.07568f));
-	shader.setVec3("surfaceMat.specular", glm::vec3(0.633f, 0.727811f, 0.633f));
-	shader.setFloat("surfaceMat.shininess", 128 * 0.6f);
+	mainShader.use();
+	mainShader.setVec3("surfaceMat.ambient", glm::vec3(0.0215f, 0.1745f, 0.0215f));
+	mainShader.setVec3("surfaceMat.diffuse", glm::vec3(0.07568f, 0.61424f, 0.07568f));
+	mainShader.setVec3("surfaceMat.specular", glm::vec3(0.633f, 0.727811f, 0.633f));
+	mainShader.setFloat("surfaceMat.shininess", 128 * 0.6f);
 
-	shader.setVec3("lightColor", glm::vec3(1.0f));
+	lightSourceShader.setVec3("lightColor", lightColor);
 
 	// MAIN RENDERING LOOP
 	while (!glfwWindowShouldClose(window))
@@ -194,12 +198,12 @@ int main()
 		// Reinitialize frame buffer
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		shader.use();
-
-		shader.setVec3("lightPosition", glm::vec3(1.0f));
-		shader.setVec3("viewPosition", camera.position);
-		shader.setInt("useBlinnPhong", useBlinnPhong);
+		
+		//Main shader usage
+		mainShader.use();
+		mainShader.setVec3("lightPosition", lightPosition);
+		mainShader.setVec3("viewPosition", camera.position);
+		mainShader.setInt("useBlinnPhong", useBlinnPhong);
 
 		// declare transforms
 		glm::mat4 model = glm::mat4(1.0f);
@@ -213,8 +217,8 @@ int main()
 		// Update view matrix
 		view = camera.GetViewMatrix();
 
-		shader.setMat4("view", view);
-		shader.setMat4("projection", projection);
+		mainShader.setMat4("view", view);
+		mainShader.setMat4("projection", projection);
 
 		//RENDERING
 		glBindVertexArray(VAO);
@@ -224,12 +228,27 @@ int main()
 			model = glm::mat4(1.0f);
 
 			model = glm::translate(model, cubePositions[i]);
-			model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.0f, 1.0f, 0.0f));
+			model = glm::rotate(model, glm::radians(10.0f * i), glm::vec3(0.0f, 1.0f, 0.0f));
 
-			shader.setMat4("model", model);
+			mainShader.setMat4("model", model);
 
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
+
+		//Light source cube 
+		lightSourceShader.use();
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, lightPosition);
+		model = glm::scale(model, glm::vec3(0.2f));
+
+		lightSourceShader.setMat4("model", model);
+		lightSourceShader.setMat4("view", view);
+		lightSourceShader.setMat4("projection", projection);
+		lightSourceShader.setVec3("lightColor", lightColor);
+
+		//In case of different VAO there should be a re-bounding of the Textures etc.
+
+		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		// glfw: double buffering and polling IO events (keyboard, mouse, etc.)
 		glfwSwapBuffers(window);

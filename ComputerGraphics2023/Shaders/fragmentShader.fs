@@ -3,8 +3,8 @@
 struct Material
 {
     vec3 ambient;
-    vec3 diffuse;
-    vec3 specular;
+    sampler2D diffuse;
+    sampler2D specular;
     float shininess;
 };
 
@@ -29,24 +29,24 @@ void main()
     vec3 specular = vec3(0.0);
 
     // Ambient component
-    ambient = surfaceMat.ambient;
+    ambient = surfaceMat.ambient * texture(surfaceMat.diffuse, texCoordinates).rgb;
 
     // Diffuse component
     vec3 normal = normalize(fragNormal);
     vec3 lightDirection = normalize(lightPosition - fragPosition);
-    diffuse = surfaceMat.diffuse * max(dot(normal, lightDirection), 0.0);
+    diffuse = texture(surfaceMat.diffuse, texCoordinates).rgb * max(dot(normal, lightDirection), 0.0);
 
     // Specular component
     vec3 viewDirection = normalize(viewPosition - fragPosition);
     if(useBlinnPhong)
     {
         vec3 halfwayVector = normalize(lightDirection + viewDirection);
-        specular = surfaceMat.specular * pow(max(dot(halfwayVector, normal), 0.0), surfaceMat.shininess);
+        specular = texture(surfaceMat.specular, texCoordinates).rgb * pow(max(dot(halfwayVector, normal), 0.0), surfaceMat.shininess);
     }
     else
     {
         vec3 reflectionDirection = reflect(-lightDirection, normal);
-        specular = surfaceMat.specular * pow(max(dot(viewDirection, reflectionDirection), 0.0), surfaceMat.shininess);
+        specular = texture(surfaceMat.specular, texCoordinates).rgb * pow(max(dot(viewDirection, reflectionDirection), 0.0), surfaceMat.shininess);
     }
 
     vec3 result = (ambient + diffuse + specular) * lightColor;
