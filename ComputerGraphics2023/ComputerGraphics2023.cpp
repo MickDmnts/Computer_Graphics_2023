@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include <limits>
+#include <vector>
 
 //Custom includes
 #include "shader.h"
@@ -18,6 +19,8 @@
 void GLFW_Init();
 GLFWwindow* GLFW_WindowInit();
 bool GLAD_Init();
+
+unsigned int loadCubemap(std::vector<std::string> faces);
 
 void frameBufferSizeCallback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
@@ -41,15 +44,23 @@ float movementSpeed = 1.0f;
 float keyCD = 0.0f;
 float toggleCD = 1.0f;
 
+//Skybox vector
+std::vector<std::string> faces
+{
+	"Textures/skybox_2/0_right.png",
+	"Textures/skybox_2/1_left.png",
+	"Textures/skybox_2/2_top.png",
+	"Textures/skybox_2/3_bottom.png",
+	"Textures/skybox_2/4_front.png",
+	"Textures/skybox_2/5_back.png",
+};
+
 //Shader
 Shader mainShader;
 Shader lightSourceShader;
 bool useBlinnPhong = false;
 glm::vec3 lightPosition = glm::vec3(0.0f, 1.0f, 0.0f);
 glm::vec3 lightColor = glm::vec3(1.0f);
-
-//Texture loader
-TextureLoader textLoader;
 
 //Mouse position data
 float previousX = 0.0f;
@@ -88,7 +99,6 @@ int main()
 
 	mainShader = Shader("Shaders/vertexShader.vs", "Shaders/fragmentShader.fs");
 	lightSourceShader = Shader("Shaders/vertexShader.vs", "Shaders/lightSourceShader.fs");
-	textLoader = TextureLoader();
 
 	// Geometry definition
 	float vertices[] = {
@@ -171,17 +181,27 @@ int main()
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 	glEnableVertexAttribArray(2);
 
-	//VAO - VBO Unbinding to make the pipeline clearer.
+	//Texture loading
+	unsigned int diffuseMap = TextureLoader().loadTexture("Textures/diffuseMap.png", false);
+	unsigned int specularMap = TextureLoader().loadTexture("Textures/specularMap.png", false);
+	unsigned int skybox = loadCubemap(faces);
+
+	//VAO - VBO Unbinding to make the pipeline cleaner.
 	glBindBuffer(GL_ARRAY_BUFFER, 0); //VBO Unbind
 	glBindVertexArray(0); //VAO Unbind
 
 	//Material setup
 	mainShader.use();
-	mainShader.setVec3("surfaceMat.ambient", glm::vec3(0.0215f, 0.1745f, 0.0215f));
-	mainShader.setVec3("surfaceMat.diffuse", glm::vec3(0.07568f, 0.61424f, 0.07568f));
-	mainShader.setVec3("surfaceMat.specular", glm::vec3(0.633f, 0.727811f, 0.633f));
-	mainShader.setFloat("surfaceMat.shininess", 128 * 0.6f);
+	mainShader.setVec3("surfaceMat.ambient", glm::vec3(0.7f));
 
+	//Set the index of the textures for rendering below
+	mainShader.setInt("surfaceMat.diffuse", 0);
+	mainShader.setInt("surfaceMat.specular", 1);
+	//=================================================
+
+	mainShader.setFloat("surfaceMat.shininess", 128 * 0.8f);
+
+	//Light source setup
 	lightSourceShader.setVec3("lightColor", lightColor);
 
 	// MAIN RENDERING LOOP
@@ -196,7 +216,7 @@ int main()
 		processInput(window);
 
 		// Reinitialize frame buffer
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
 		//Main shader usage
@@ -223,6 +243,13 @@ int main()
 		//RENDERING
 		glBindVertexArray(VAO);
 
+		//Effectively sets the samplers2D
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, diffuseMap);
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, specularMap);
+
 		for (int i = 0; i < 10; i++)
 		{
 			model = glm::mat4(1.0f);
@@ -238,6 +265,8 @@ int main()
 		//Light source cube 
 		lightSourceShader.use();
 		model = glm::mat4(1.0f);
+		//Light pos lerping
+	 	lightPosition = glm::vec3(glm::sin(glfwGetTime()), glm::cos(glfwGetTime()), 2.0f);
 		model = glm::translate(model, lightPosition);
 		model = glm::scale(model, glm::vec3(0.2f));
 
@@ -247,7 +276,7 @@ int main()
 		lightSourceShader.setVec3("lightColor", lightColor);
 
 		//In case of different VAO there should be a re-bounding of the Textures etc.
-
+		//glBindVertexArray(VAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		// glfw: double buffering and polling IO events (keyboard, mouse, etc.)
@@ -385,5 +414,72 @@ void mouseCallback(GLFWwindow* window, double xPos, double yPos)
 void scrollCallback(GLFWwindow* window, double xOffset, double yOffset)
 {
 	camera.HandleMouseScroll((float)yOffset);
+}
+
+// Face order should follow the rule:
+// 0. Right face (+X)
+// 1. Left face (-X)
+// 2. Top face (+Y)
+// 3. Bottom face (-Y)
+// 4. Front face (+Z)
+// 5. Back face (-Z)
+unsigned int loadCubemap(std::vector<std::string> faces)
+{
+	unsigned int textureID;
+
+	glGenTextures(1, &textureID);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+	// Texture wrapping properties
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	// ---------------------------
+
+	// Texture filtering properties
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	// ----------------------------
+
+	int width, height, numOfChannels;
+
+	for (unsigned int i = 0; i < faces.size(); i++)
+	{
+		unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &numOfChannels, 0);
+
+		if (data)
+		{
+			GLenum format;
+
+			if (numOfChannels == 1)
+			{
+				format = GL_RED;
+			}
+			else if (numOfChannels == 3)
+			{
+				format = GL_RGB;
+			}
+			else if (numOfChannels == 4)
+			{
+				format = GL_RGBA;
+			}
+			else
+			{
+				std::cout << "TEXTURE FILE " << faces[i] << " FAILED TO LOAD: INCOMPATIBLE NUMBER OF CHANNELS!!" << std::endl;
+				stbi_image_free(data);
+				continue;
+			}
+
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+		}
+		else
+		{
+			std::cout << "TEXTURE FILE FAILED TO LOAD FROM PATH " << faces[i] << "!!" << std::endl;
+		}
+
+		stbi_image_free(data);
+	}
+
+	return textureID;
 }
 #pragma endregion
