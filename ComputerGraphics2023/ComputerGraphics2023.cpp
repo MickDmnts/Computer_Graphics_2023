@@ -44,20 +44,10 @@ float movementSpeed = 1.0f;
 float keyCD = 0.0f;
 float toggleCD = 1.0f;
 
-//Skybox vector
-std::vector<std::string> faces
-{
-	"Textures/skybox_2/0_right.png",
-	"Textures/skybox_2/1_left.png",
-	"Textures/skybox_2/2_top.png",
-	"Textures/skybox_2/3_bottom.png",
-	"Textures/skybox_2/4_front.png",
-	"Textures/skybox_2/5_back.png",
-};
-
 //Shader
 Shader mainShader;
 Shader lightSourceShader;
+Shader skyboxShader;
 bool useBlinnPhong = false;
 glm::vec3 lightPosition = glm::vec3(0.0f, 1.0f, 0.0f);
 glm::vec3 lightColor = glm::vec3(1.0f);
@@ -99,65 +89,7 @@ int main()
 
 	mainShader = Shader("Shaders/vertexShader.vs", "Shaders/fragmentShader.fs");
 	lightSourceShader = Shader("Shaders/vertexShader.vs", "Shaders/lightSourceShader.fs");
-
-	// Geometry definition
-	float vertices[] = {
-		// positions         // normals           // texture
-	   -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
-		0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  0.0f,
-		0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
-		0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
-	   -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  1.0f,
-	   -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
-
-	   -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
-		0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  0.0f,
-		0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
-		0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
-	   -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  1.0f,
-	   -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
-
-	   -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
-	   -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
-	   -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-	   -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-	   -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-	   -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
-
-		0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
-		0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
-		0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-		0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-		0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-		0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
-
-	   -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
-		0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  1.0f,
-		0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
-		0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
-	   -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  0.0f,
-	   -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
-
-	   -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f,
-		0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  1.0f,
-		0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
-		0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
-	   -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
-	   -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f
-	};
-
-	glm::vec3 cubePositions[] = {
-		glm::vec3(0.0f, 0.0f, 0.0f),
-		glm::vec3(2.0f, 5.0f, -15.0f),
-		glm::vec3(-1.5f, -2.2f, -2.5f),
-		glm::vec3(-3.8f, -2.0f, -12.3f),
-		glm::vec3(2.4f, -0.4f, -3.5f),
-		glm::vec3(-1.7f, 3.0f, -7.5f),
-		glm::vec3(1.3f, -2.0f, -2.5f),
-		glm::vec3(1.5f, 2.0f, -2.5f),
-		glm::vec3(1.5f, 0.2f, -1.5f),
-		glm::vec3(-1.3f, 1.0f, -1.5f),
-	};
+	skyboxShader = Shader("Shaders/skyboxShaderVertex.vs", "Shaders/skyboxShaderFragment.fs");
 
 	unsigned int VBO, VAO;
 
@@ -181,10 +113,25 @@ int main()
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 	glEnableVertexAttribArray(2);
 
+	// Skybox VAO and VBO
+	unsigned int skyboxVBO, skyboxVAO;
+
+	glGenVertexArrays(1, &skyboxVAO);
+	glGenBuffers(1, &skyboxVBO);
+
+	glBindVertexArray(skyboxVAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), skyboxVertices, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+	// ------------------
+
 	//Texture loading
 	unsigned int diffuseMap = TextureLoader().loadTexture("Textures/diffuseMap.png", false);
 	unsigned int specularMap = TextureLoader().loadTexture("Textures/specularMap.png", false);
-	unsigned int skybox = loadCubemap(faces);
+	unsigned int skybox = loadCubemap(skyboxFaces);
 
 	//VAO - VBO Unbinding to make the pipeline cleaner.
 	glBindBuffer(GL_ARRAY_BUFFER, 0); //VBO Unbind
@@ -197,7 +144,6 @@ int main()
 	//Set the index of the textures for rendering below
 	mainShader.setInt("surfaceMat.diffuse", 0);
 	mainShader.setInt("surfaceMat.specular", 1);
-	//=================================================
 
 	mainShader.setFloat("surfaceMat.shininess", 128 * 0.8f);
 
@@ -219,12 +165,6 @@ int main()
 		glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
-		//Main shader usage
-		mainShader.use();
-		mainShader.setVec3("lightPosition", lightPosition);
-		mainShader.setVec3("viewPosition", camera.position);
-		mainShader.setInt("useBlinnPhong", useBlinnPhong);
-
 		// declare transforms
 		glm::mat4 model = glm::mat4(1.0f);
 		glm::mat4 view = glm::mat4(1.0f);
@@ -236,6 +176,17 @@ int main()
 
 		// Update view matrix
 		view = camera.GetViewMatrix();
+
+		// enable shader and update uniform variables
+		mainShader.use();
+
+		// Real time uniforms for blinn-phong shader
+		glm::vec3 lightPos = glm::vec3(glm::sin(glfwGetTime()), glm::cos(glfwGetTime()), 2.0f);
+
+		mainShader.setVec3("lightPosition", lightPos);
+		mainShader.setVec3("viewPosition", camera.position);
+		mainShader.setInt("useBlinnPhong", useBlinnPhong);
+		// -----------------------------------------
 
 		mainShader.setMat4("view", view);
 		mainShader.setMat4("projection", projection);
@@ -250,6 +201,7 @@ int main()
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, specularMap);
 
+		//Draw the cubes
 		for (int i = 0; i < 10; i++)
 		{
 			model = glm::mat4(1.0f);
@@ -276,10 +228,24 @@ int main()
 		lightSourceShader.setVec3("lightColor", lightColor);
 
 		//In case of different VAO there should be a re-bounding of the Textures etc.
-		//glBindVertexArray(VAO);
+		glBindVertexArray(VAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
-		// glfw: double buffering and polling IO events (keyboard, mouse, etc.)
+		//OPTIMAL SKYBOX
+		glDepthFunc(GL_LEQUAL);
+		skyboxShader.use();
+
+		skyboxShader.setInt("skybox", 0);
+		skyboxShader.setMat4("view", glm::mat4(glm::mat3(view)));
+		skyboxShader.setMat4("projection", projection);
+
+		glBindTexture(GL_TEXTURE_CUBE_MAP, skybox);
+		glBindVertexArray(skyboxVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		glDepthFunc(GL_LESS);
+
+		//glfw: double buffering and polling IO events (keyboard, mouse, etc.)
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
