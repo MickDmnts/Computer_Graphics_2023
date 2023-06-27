@@ -19,8 +19,12 @@
 void GLFW_Init();
 GLFWwindow* GLFW_WindowInit();
 bool GLAD_Init();
+void initShaders();
 
 unsigned int loadCubemap(std::vector<std::string> faces);
+void loadEnviromentalMappingShader(glm::mat4 model, glm::mat4 view, glm::mat4 projection, unsigned int skybox);
+void loadLightsource(glm::mat4 model, glm::mat4 view, glm::mat4 projection);
+void drawSkybox(glm::mat4 view, glm::mat4 projection, unsigned int VAO, unsigned int skyboxVAO, unsigned int skybox);
 
 void frameBufferSizeCallback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
@@ -48,6 +52,7 @@ float toggleCD = 1.0f;
 Shader mainShader;
 Shader lightSourceShader;
 Shader skyboxShader;
+Shader envMappingShader;
 bool useBlinnPhong = false;
 glm::vec3 lightPosition = glm::vec3(0.0f, 1.0f, 0.0f);
 glm::vec3 lightColor = glm::vec3(1.0f);
@@ -87,9 +92,7 @@ int main()
 	//Enabling-Disabling depth testing
 	glEnable(GL_DEPTH_TEST);
 
-	mainShader = Shader("Shaders/vertexShader.vs", "Shaders/fragmentShader.fs");
-	lightSourceShader = Shader("Shaders/vertexShader.vs", "Shaders/lightSourceShader.fs");
-	skyboxShader = Shader("Shaders/skyboxShaderVertex.vs", "Shaders/skyboxShaderFragment.fs");
+	initShaders();
 
 	unsigned int VBO, VAO;
 
@@ -131,7 +134,7 @@ int main()
 	//Texture loading
 	unsigned int diffuseMap = TextureLoader().loadTexture("Textures/diffuseMap.png", false);
 	unsigned int specularMap = TextureLoader().loadTexture("Textures/specularMap.png", false);
-	unsigned int skybox = loadCubemap(skyboxFaces);
+	unsigned int skybox = TextureLoader().loadCubemap(skyboxFaces);
 
 	//VAO - VBO Unbinding to make the pipeline cleaner.
 	glBindBuffer(GL_ARRAY_BUFFER, 0); //VBO Unbind
@@ -164,32 +167,13 @@ int main()
 		// Reinitialize frame buffer
 		glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		
+
 		// declare transforms
 		glm::mat4 model = glm::mat4(1.0f);
 		glm::mat4 view = glm::mat4(1.0f);
 		glm::mat4 projection = glm::mat4(1.0f);
 
-		// calculate projection matrix
-		// attributes: fov, aspect ratio, near clipping plane, far clipping plane
-		projection = glm::perspective(glm::radians(camera.fov), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
-
-		// Update view matrix
-		view = camera.GetViewMatrix();
-
-		// enable shader and update uniform variables
-		mainShader.use();
-
-		// Real time uniforms for blinn-phong shader
-		glm::vec3 lightPos = glm::vec3(glm::sin(glfwGetTime()), glm::cos(glfwGetTime()), 2.0f);
-
-		mainShader.setVec3("lightPosition", lightPos);
-		mainShader.setVec3("viewPosition", camera.position);
-		mainShader.setInt("useBlinnPhong", useBlinnPhong);
-		// -----------------------------------------
-
-		mainShader.setMat4("view", view);
-		mainShader.setMat4("projection", projection);
+		handleCameraRendering(view, projection);
 
 		//RENDERING
 		glBindVertexArray(VAO);
@@ -202,7 +186,7 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, specularMap);
 
 		//Draw the cubes
-		for (int i = 0; i < 10; i++)
+		for (int i = 1; i < 10; i++)
 		{
 			model = glm::mat4(1.0f);
 
@@ -214,36 +198,14 @@ int main()
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
 
-		//Light source cube 
-		lightSourceShader.use();
-		model = glm::mat4(1.0f);
-		//Light pos lerping
-	 	lightPosition = glm::vec3(glm::sin(glfwGetTime()), glm::cos(glfwGetTime()), 2.0f);
-		model = glm::translate(model, lightPosition);
-		model = glm::scale(model, glm::vec3(0.2f));
+		//Env mapping cube
+		loadEnviromentalMappingShader(model, view, projection, skybox);
 
-		lightSourceShader.setMat4("model", model);
-		lightSourceShader.setMat4("view", view);
-		lightSourceShader.setMat4("projection", projection);
-		lightSourceShader.setVec3("lightColor", lightColor);
-
-		//In case of different VAO there should be a re-bounding of the Textures etc.
-		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-
-		//OPTIMAL SKYBOX
-		glDepthFunc(GL_LEQUAL);
-		skyboxShader.use();
-
-		skyboxShader.setInt("skybox", 0);
-		skyboxShader.setMat4("view", glm::mat4(glm::mat3(view)));
-		skyboxShader.setMat4("projection", projection);
-
-		glBindTexture(GL_TEXTURE_CUBE_MAP, skybox);
-		glBindVertexArray(skyboxVAO);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-
-		glDepthFunc(GL_LESS);
+		//Lightsource cube
+		loadLightsource(model , view, projection);
+		
+		//Skybox
+		drawSkybox(view, projection, VAO, skyboxVAO, skybox);
 
 		//glfw: double buffering and polling IO events (keyboard, mouse, etc.)
 		glfwSwapBuffers(window);
@@ -292,6 +254,96 @@ bool GLAD_Init()
 	}
 
 	return true;
+}
+#pragma endregion
+
+#pragma region SHADERS
+void initShaders()
+{
+	mainShader = Shader("Shaders/vertexShader.vs", "Shaders/fragmentShader.fs");
+	lightSourceShader = Shader("Shaders/vertexShader.vs", "Shaders/lightSourceShader.fs");
+	skyboxShader = Shader("Shaders/skyboxShaderVertex.vs", "Shaders/skyboxShaderFragment.fs");
+	envMappingShader = Shader("Shaders/vertexShader.vs", "Shaders/envMappingFragment.fs");
+}
+
+void handleCameraRendering(glm::mat4 view, glm::mat4 projection)
+{
+	// calculate projection matrix
+	// attributes: fov, aspect ratio, near clipping plane, far clipping plane
+	projection = glm::perspective(glm::radians(camera.fov), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
+
+	// Update view matrix
+	view = camera.GetViewMatrix();
+
+	// enable shader and update uniform variables
+	mainShader.use();
+
+	// Real time uniforms for blinn-phong shader
+	glm::vec3 lightPos = glm::vec3(glm::sin(glfwGetTime()), glm::cos(glfwGetTime()), 2.0f);
+
+	mainShader.setVec3("lightPosition", lightPos);
+	mainShader.setVec3("viewPosition", camera.position);
+	mainShader.setInt("useBlinnPhong", useBlinnPhong);
+
+	mainShader.setMat4("view", view);
+	mainShader.setMat4("projection", projection);
+}
+
+void loadEnviromentalMappingShader(glm::mat4 model, glm::mat4 view, glm::mat4 projection, unsigned int skybox)
+{
+	//Render the environmentally mapped cube
+	envMappingShader.use();
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, cubePositions[0]);
+	model = glm::rotate(model, glm::radians(10.0f * 0), glm::vec3(0.0f, 1.0f, 0.0f));
+
+	envMappingShader.setMat4("model", model);
+	envMappingShader.setMat4("view", view);
+	envMappingShader.setMat4("projection", projection);
+	envMappingShader.setFloat("extMediumIdx", 1.000293);
+	envMappingShader.setFloat("entMediumIdx", 1.31);
+	envMappingShader.setVec3("viewPosition", camera.position);
+	envMappingShader.setInt("skybox", 0);
+
+	glBindTexture(GL_TEXTURE_CUBE_MAP, skybox);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+}
+
+void loadLightsource(glm::mat4 model, glm::mat4 view, glm::mat4 projection)
+{
+	//Light source cube 
+	lightSourceShader.use();
+	model = glm::mat4(1.0f);
+	//Light pos lerping
+	lightPosition = glm::vec3(glm::sin(glfwGetTime()), glm::cos(glfwGetTime()), 2.0f);
+	model = glm::translate(model, lightPosition);
+	model = glm::scale(model, glm::vec3(0.2f));
+
+	lightSourceShader.setMat4("model", model);
+	lightSourceShader.setMat4("view", view);
+	lightSourceShader.setMat4("projection", projection);
+	lightSourceShader.setVec3("lightColor", lightColor);
+}
+
+void drawSkybox(glm::mat4 view, glm::mat4 projection, unsigned int VAO, unsigned int skyboxVAO, unsigned int skybox)
+{
+	//In case of different VAO there should be a re-bounding of the Textures etc.
+	glBindVertexArray(VAO);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+
+	//OPTIMAL SKYBOX
+	glDepthFunc(GL_LEQUAL);
+	skyboxShader.use();
+
+	skyboxShader.setInt("skybox", 0);
+	skyboxShader.setMat4("view", glm::mat4(glm::mat3(view)));
+	skyboxShader.setMat4("projection", projection);
+
+	glBindTexture(GL_TEXTURE_CUBE_MAP, skybox);
+	glBindVertexArray(skyboxVAO);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+
+	glDepthFunc(GL_LESS);
 }
 #pragma endregion
 
@@ -391,7 +443,7 @@ void scrollCallback(GLFWwindow* window, double xOffset, double yOffset)
 // 5. Back face (-Z)
 unsigned int loadCubemap(std::vector<std::string> faces)
 {
-	unsigned int textureID;
+	unsigned int textureID = 0;
 
 	glGenTextures(1, &textureID);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
@@ -440,7 +492,7 @@ unsigned int loadCubemap(std::vector<std::string> faces)
 		}
 		else
 		{
-			std::cout << "TEXTURE FILE FAILED TO LOAD FROM PATH " << faces[i] << "!!" << std::endl;
+			std::cout << "TEXTURE FILE FAILED TO LOAD FROM PATH" << faces[i] << "!!" << std::endl;
 		}
 
 		stbi_image_free(data);
