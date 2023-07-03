@@ -23,10 +23,10 @@
     <ClCompile Include="ComputerGraphics2023.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="3rdParty\src\Mesh.h" />
-    <ClInclude Include="3rdParty\src\Model.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Global.h" />
+    <ClInclude Include="Mesh.h" />
+    <ClInclude Include="Model.h" />
     <ClInclude Include="shader.h" />
     <ClInclude Include="TextureLoader.h" />
   </ItemGroup>
