@@ -173,7 +173,25 @@ int main()
 		glm::mat4 view = glm::mat4(1.0f);
 		glm::mat4 projection = glm::mat4(1.0f);
 
-		handleCameraRendering(view, projection);
+		// calculate projection matrix
+		// attributes: fov, aspect ratio, near clipping plane, far clipping plane
+		projection = glm::perspective(glm::radians(camera.fov), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
+
+		// Update view matrix
+		view = camera.GetViewMatrix();
+
+		// enable shader and update uniform variables
+		mainShader.use();
+
+		// Real time uniforms for blinn-phong shader
+		glm::vec3 lightPos = glm::vec3(glm::sin(glfwGetTime()), glm::cos(glfwGetTime()), 2.0f);
+
+		mainShader.setVec3("lightPosition", lightPos);
+		mainShader.setVec3("viewPosition", camera.position);
+		mainShader.setInt("useBlinnPhong", useBlinnPhong);
+
+		mainShader.setMat4("view", view);
+		mainShader.setMat4("projection", projection);
 
 		//RENDERING
 		glBindVertexArray(VAO);
@@ -264,29 +282,6 @@ void initShaders()
 	lightSourceShader = Shader("Shaders/vertexShader.vs", "Shaders/lightSourceShader.fs");
 	skyboxShader = Shader("Shaders/skyboxShaderVertex.vs", "Shaders/skyboxShaderFragment.fs");
 	envMappingShader = Shader("Shaders/vertexShader.vs", "Shaders/envMappingFragment.fs");
-}
-
-void handleCameraRendering(glm::mat4 view, glm::mat4 projection)
-{
-	// calculate projection matrix
-	// attributes: fov, aspect ratio, near clipping plane, far clipping plane
-	projection = glm::perspective(glm::radians(camera.fov), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
-
-	// Update view matrix
-	view = camera.GetViewMatrix();
-
-	// enable shader and update uniform variables
-	mainShader.use();
-
-	// Real time uniforms for blinn-phong shader
-	glm::vec3 lightPos = glm::vec3(glm::sin(glfwGetTime()), glm::cos(glfwGetTime()), 2.0f);
-
-	mainShader.setVec3("lightPosition", lightPos);
-	mainShader.setVec3("viewPosition", camera.position);
-	mainShader.setInt("useBlinnPhong", useBlinnPhong);
-
-	mainShader.setMat4("view", view);
-	mainShader.setMat4("projection", projection);
 }
 
 void loadEnviromentalMappingShader(glm::mat4 model, glm::mat4 view, glm::mat4 projection, unsigned int skybox)
