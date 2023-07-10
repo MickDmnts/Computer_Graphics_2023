@@ -14,17 +14,14 @@
 #include "shader.h"
 #include "TextureLoader.h"
 #include "Camera.h"
+#include "Model.h"
 
 #pragma region SIGNATURES
 void GLFW_Init();
 GLFWwindow* GLFW_WindowInit();
 bool GLAD_Init();
-void initShaders();
 
 unsigned int loadCubemap(std::vector<std::string> faces);
-void loadEnviromentalMappingShader(glm::mat4 model, glm::mat4 view, glm::mat4 projection, unsigned int skybox);
-void loadLightsource(glm::mat4 model, glm::mat4 view, glm::mat4 projection);
-void drawSkybox(glm::mat4 view, glm::mat4 projection, unsigned int VAO, unsigned int skyboxVAO, unsigned int skybox);
 
 void frameBufferSizeCallback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
@@ -49,11 +46,13 @@ float keyCD = 0.0f;
 float toggleCD = 1.0f;
 
 //Shader
-Shader mainShader;
 Shader lightSourceShader;
 Shader skyboxShader;
 Shader envMappingShader;
+Shader modelShader;
 bool useBlinnPhong = false;
+int currentModel = 0;
+
 glm::vec3 lightPosition = glm::vec3(0.0f, 1.0f, 0.0f);
 glm::vec3 lightColor = glm::vec3(1.0f);
 
@@ -64,6 +63,7 @@ bool isFirstFrame = true;
 
 // Camera declaration
 Camera camera(glm::vec3(0.0f, 0.0f, 2.0f), glm::vec3(0.0f, 0.0f, -1.0f));
+std::vector<Model> models;
 #pragma endregion
 
 int main()
@@ -92,29 +92,11 @@ int main()
 	//Enabling-Disabling depth testing
 	glEnable(GL_DEPTH_TEST);
 
-	initShaders();
-
-	unsigned int VBO, VAO;
-
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-
-	glBindVertexArray(VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	// Vertex attribute for POSITION
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-
-	// Vertex attribute for NORMAL
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
-
-	// Vertex attribute for TEXTURE
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-	glEnableVertexAttribArray(2);
+	//Shader loading
+	lightSourceShader = Shader("Shaders/vertexShader.vs", "Shaders/lightSourceShader.fs");
+	skyboxShader = Shader("Shaders/skyboxShaderVertex.vs", "Shaders/skyboxShaderFragment.fs");
+	envMappingShader = Shader("Shaders/vertexShader.vs", "Shaders/envMappingFragment.fs");
+	modelShader = Shader("Shaders/vertexShader.vs", "Shaders/modelPhongFragShader.fs");
 
 	// Skybox VAO and VBO
 	unsigned int skyboxVBO, skyboxVAO;
@@ -129,7 +111,38 @@ int main()
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
-	// ------------------
+
+	std::vector<std::string> modelPaths
+	{
+		"Models/backpack/backpack.obj",
+		"Models/tower/Medieval_tower_High.obj",
+		"Models/aircraft/E 45 Aircraft_obj.obj",
+		"Models/nanosuit/nanosuit.obj",
+		"Models/plant/indoor plant_02.obj",
+	};
+
+	for (unsigned int i = 0; i < modelPaths.size(); i++)
+	{
+		Model temp(modelPaths[i]);
+		models.push_back(temp);
+	}
+
+	std::vector<glm::vec3> positions
+	{
+		glm::vec3(1.0f),
+		glm::vec3(2.0f),
+		glm::vec3(3.0f),
+		glm::vec3(4.0f),
+		glm::vec3(5.0f),
+		glm::vec3(6.0f),
+	};
+
+	modelShader.use();
+	modelShader.setFloat("ambientCoeff", 0.05f);
+	modelShader.setFloat("shininess",128 * 0.6f);
+
+	glm::vec3 lightCol = glm::vec3(1.0f);
+	modelShader.setVec3("lightColor", lightCol);
 
 	//Texture loading
 	unsigned int diffuseMap = TextureLoader().loadTexture("Textures/diffuseMap.png", false);
@@ -139,16 +152,6 @@ int main()
 	//VAO - VBO Unbinding to make the pipeline cleaner.
 	glBindBuffer(GL_ARRAY_BUFFER, 0); //VBO Unbind
 	glBindVertexArray(0); //VAO Unbind
-
-	//Material setup
-	mainShader.use();
-	mainShader.setVec3("surfaceMat.ambient", glm::vec3(0.7f));
-
-	//Set the index of the textures for rendering below
-	mainShader.setInt("surfaceMat.diffuse", 0);
-	mainShader.setInt("surfaceMat.specular", 1);
-
-	mainShader.setFloat("surfaceMat.shininess", 128 * 0.8f);
 
 	//Light source setup
 	lightSourceShader.setVec3("lightColor", lightColor);
@@ -174,56 +177,59 @@ int main()
 		glm::mat4 projection = glm::mat4(1.0f);
 
 		// calculate projection matrix
-		// attributes: fov, aspect ratio, near clipping plane, far clipping plane
 		projection = glm::perspective(glm::radians(camera.fov), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
 
 		// Update view matrix
 		view = camera.GetViewMatrix();
 
-		// enable shader and update uniform variables
-		mainShader.use();
-
-		// Real time uniforms for blinn-phong shader
 		glm::vec3 lightPos = glm::vec3(glm::sin(glfwGetTime()), glm::cos(glfwGetTime()), 2.0f);
 
-		mainShader.setVec3("lightPosition", lightPos);
-		mainShader.setVec3("viewPosition", camera.position);
-		mainShader.setInt("useBlinnPhong", useBlinnPhong);
+		modelShader.use();
+		modelShader.setVec3("lightPosition", lightPosition);
+		modelShader.setVec3("viewPosition", camera.position);
+		modelShader.setInt("useBlinnPhong", useBlinnPhong);
+		modelShader.setMat4("view", view);
+		modelShader.setMat4("projection", projection);
 
-		mainShader.setMat4("view", view);
-		mainShader.setMat4("projection", projection);
+		model = glm::scale(model, glm::vec3(0.5f));
+		//model = glm::rotate(model, (float)glfwGetTime() * 0.5f, glm::vec3(0.0f, 1.0f, 0.0f));
 
-		//RENDERING
-		glBindVertexArray(VAO);
+		/*for (unsigned int i = 0; i < models.size(); i++)
+		{*/
+			model = glm::scale(model, glm::vec3(1.0f));
+			model = glm::translate(model, positions[currentModel]);
+			modelShader.setMat4("model", model);
 
-		//Effectively sets the samplers2D
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, diffuseMap);
-
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, specularMap);
-
-		//Draw the cubes
-		for (int i = 1; i < 10; i++)
-		{
-			model = glm::mat4(1.0f);
-
-			model = glm::translate(model, cubePositions[i]);
-			model = glm::rotate(model, glm::radians(10.0f * i), glm::vec3(0.0f, 1.0f, 0.0f));
-
-			mainShader.setMat4("model", model);
-
-			glDrawArrays(GL_TRIANGLES, 0, 36);
-		}
-
-		//Env mapping cube
-		loadEnviromentalMappingShader(model, view, projection, skybox);
+			//Draw the model
+			models[currentModel].Draw(modelShader);
+		//}
 
 		//Lightsource cube
-		loadLightsource(model , view, projection);
-		
-		//Skybox
-		drawSkybox(view, projection, VAO, skyboxVAO, skybox);
+		lightSourceShader.use();
+		model = glm::mat4(1.0f);
+		//Light pos lerping
+		lightPosition = glm::vec3(glm::sin(glfwGetTime()), glm::cos(glfwGetTime()), 2.0f);
+		model = glm::translate(model, lightPosition);
+		model = glm::scale(model, glm::vec3(0.2f));
+
+		lightSourceShader.setMat4("model", model);
+		lightSourceShader.setMat4("view", view);
+		lightSourceShader.setMat4("projection", projection);
+		lightSourceShader.setVec3("lightColor", lightColor);
+
+		//OPTIMAL SKYBOX
+		glDepthFunc(GL_LEQUAL);
+		skyboxShader.use();
+
+		skyboxShader.setInt("skybox", 0);
+		skyboxShader.setMat4("view", glm::mat4(glm::mat3(view)));
+		skyboxShader.setMat4("projection", projection);
+
+		glBindTexture(GL_TEXTURE_CUBE_MAP, skybox);
+		glBindVertexArray(skyboxVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		glDepthFunc(GL_LESS);
 
 		//glfw: double buffering and polling IO events (keyboard, mouse, etc.)
 		glfwSwapBuffers(window);
@@ -272,73 +278,6 @@ bool GLAD_Init()
 	}
 
 	return true;
-}
-#pragma endregion
-
-#pragma region SHADERS
-void initShaders()
-{
-	mainShader = Shader("Shaders/vertexShader.vs", "Shaders/fragmentShader.fs");
-	lightSourceShader = Shader("Shaders/vertexShader.vs", "Shaders/lightSourceShader.fs");
-	skyboxShader = Shader("Shaders/skyboxShaderVertex.vs", "Shaders/skyboxShaderFragment.fs");
-	envMappingShader = Shader("Shaders/vertexShader.vs", "Shaders/envMappingFragment.fs");
-}
-
-void loadEnviromentalMappingShader(glm::mat4 model, glm::mat4 view, glm::mat4 projection, unsigned int skybox)
-{
-	//Render the environmentally mapped cube
-	envMappingShader.use();
-	model = glm::mat4(1.0f);
-	model = glm::translate(model, cubePositions[0]);
-	model = glm::rotate(model, glm::radians(10.0f * 0), glm::vec3(0.0f, 1.0f, 0.0f));
-
-	envMappingShader.setMat4("model", model);
-	envMappingShader.setMat4("view", view);
-	envMappingShader.setMat4("projection", projection);
-	envMappingShader.setFloat("extMediumIdx", 1.000293);
-	envMappingShader.setFloat("entMediumIdx", 1.31);
-	envMappingShader.setVec3("viewPosition", camera.position);
-	envMappingShader.setInt("skybox", 0);
-
-	glBindTexture(GL_TEXTURE_CUBE_MAP, skybox);
-	glDrawArrays(GL_TRIANGLES, 0, 36);
-}
-
-void loadLightsource(glm::mat4 model, glm::mat4 view, glm::mat4 projection)
-{
-	//Light source cube 
-	lightSourceShader.use();
-	model = glm::mat4(1.0f);
-	//Light pos lerping
-	lightPosition = glm::vec3(glm::sin(glfwGetTime()), glm::cos(glfwGetTime()), 2.0f);
-	model = glm::translate(model, lightPosition);
-	model = glm::scale(model, glm::vec3(0.2f));
-
-	lightSourceShader.setMat4("model", model);
-	lightSourceShader.setMat4("view", view);
-	lightSourceShader.setMat4("projection", projection);
-	lightSourceShader.setVec3("lightColor", lightColor);
-}
-
-void drawSkybox(glm::mat4 view, glm::mat4 projection, unsigned int VAO, unsigned int skyboxVAO, unsigned int skybox)
-{
-	//In case of different VAO there should be a re-bounding of the Textures etc.
-	glBindVertexArray(VAO);
-	glDrawArrays(GL_TRIANGLES, 0, 36);
-
-	//OPTIMAL SKYBOX
-	glDepthFunc(GL_LEQUAL);
-	skyboxShader.use();
-
-	skyboxShader.setInt("skybox", 0);
-	skyboxShader.setMat4("view", glm::mat4(glm::mat3(view)));
-	skyboxShader.setMat4("projection", projection);
-
-	glBindTexture(GL_TEXTURE_CUBE_MAP, skybox);
-	glBindVertexArray(skyboxVAO);
-	glDrawArrays(GL_TRIANGLES, 0, 36);
-
-	glDepthFunc(GL_LESS);
 }
 #pragma endregion
 
@@ -391,6 +330,16 @@ void processInput(GLFWwindow* window)
 		if (keyCD >= toggleCD)
 		{
 			useBlinnPhong = !useBlinnPhong;
+			keyCD = 0.0f;
+		}
+	}
+
+	//Model toggling
+	if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS)
+	{
+		if (keyCD >= toggleCD)
+		{
+			currentModel = currentModel + 1 >= models.size() ? 0 : currentModel + 1 % models.size();
 			keyCD = 0.0f;
 		}
 	}
